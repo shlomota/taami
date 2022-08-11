@@ -13,10 +13,10 @@ import requests
 
 
 if not os.path.exists("checkpoint-5000/pytorch_model.bin"):
-    URL = "https://get.station307.com/YwfoJhSY3fd/pytorch_model.bin"
-    response = requests.get(URL)
-    with open("checkpoint-5000/pytorch_model.bin", "wb") as f:
-        f.write(response.content)
+    import gdown
+    url = 'https://drive.google.com/uc?id=1VdW3YIRkwy72RNNIG9YC8-9gwASXpzWp'
+    output = 'checkpoint-5000/pytorch_model.bin'
+    gdown.download(url, output, quiet=False)
 
 #out_cantillation = r"all_cantillation.pkl"
 #cantillation = joblib.load(out_cantillation)

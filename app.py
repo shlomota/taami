@@ -12,7 +12,7 @@ import unicodedata
 import requests
 
 
-if not os.path.exists("checkpoint-5000/pytorch_model.bin")
+if not os.path.exists("checkpoint-5000/pytorch_model.bin"):
     URL = "https://get.station307.com/YwfoJhSY3fd/pytorch_model.bin"
     response = requests.get(URL)
     with open("checkpoint-5000/pytorch_model.bin", "wb") as f:

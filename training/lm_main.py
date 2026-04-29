@@ -32,7 +32,7 @@ import torch
 from datasets import Dataset
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from peft import LoraConfig, get_peft_model, TaskType
-from trl import SFTTrainer, SFTConfig, DataCollatorForCompletionOnlyLM
+from trl import SFTTrainer, SFTConfig
 
 try:
     _TRAINING_DIR = Path(__file__).resolve().parent
@@ -191,11 +191,6 @@ model.print_trainable_parameters()
 # %% [markdown]
 # ## Training
 
-# %% Data collator — loss only on the response (taam names)
-collator = DataCollatorForCompletionOnlyLM(
-    response_template=RESPONSE_TEMPLATE,
-    tokenizer=tokenizer,
-)
 
 # %% Training config
 sft_cfg = SFTConfig(
@@ -220,6 +215,8 @@ sft_cfg = SFTConfig(
     report_to="none",
     seed=SEED,
     dataset_text_field="text",
+    packing=False,
+    response_template=RESPONSE_TEMPLATE,
 )
 
 trainer = SFTTrainer(
@@ -227,7 +224,7 @@ trainer = SFTTrainer(
     args=sft_cfg,
     train_dataset=train_dataset,
     eval_dataset=val_dataset,
-    data_collator=collator,
+    tokenizer=tokenizer,
 )
 
 # %% Train

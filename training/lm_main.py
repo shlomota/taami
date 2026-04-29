@@ -215,7 +215,6 @@ sft_cfg = SFTConfig(
     seed=SEED,
     dataset_text_field="text",
     packing=False,
-    max_seq_length=MAX_SEQ_LEN,
 )
 
 trainer = SFTTrainer(

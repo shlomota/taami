@@ -19,7 +19,7 @@ except NameError:
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from tikkun_loader import load_tikkun_data, verse_word_list, UNICODE_TO_TAAM
+from tikkun_loader import load_tikkun_data, verse_word_list, UNICODE_TO_TAAM, MAQAF
 
 NO_TAAM = "z"
 
@@ -47,7 +47,7 @@ def _verse_to_record(
         for ch in w["text"]:
             if ch in UNICODE_TO_TAAM:
                 lbl = ch  # last ta'am on the word wins
-        tokens.append(w["plain"])
+        tokens.append(w["plain"].replace(MAQAF, ""))
         labels.append(label2id[lbl])
     if not tokens:
         return None

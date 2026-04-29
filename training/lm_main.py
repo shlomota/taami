@@ -151,6 +151,9 @@ val_dataset   = Dataset.from_dict({"text": val_texts})
 val_dataset_small = val_dataset.select(range(len(val_dataset) // 20))
 print(f"Eval on {len(val_dataset_small)} samples (5% of val)")
 
+# Pick one verse to track during training
+sample_verse_idx = random.randint(0, len(val_verses) - 1)
+
 # %% [markdown]
 # ## Tokenizer
 
@@ -202,20 +205,17 @@ model.print_trainable_parameters()
 
 # %% Callback to print sample predictions
 class SamplePredictionCallback(TrainerCallback):
-    def __init__(self, verses, labels, predict_fn):
-        self.verses = verses
-        self.labels = labels
+    def __init__(self, verse, label, predict_fn):
+        self.verse = verse
+        self.label = label
         self.predict_fn = predict_fn
 
     def on_evaluate(self, args, state, control, **kwargs):
-        idx = random.randint(0, len(self.verses) - 1)
-        verse = self.verses[idx]
-        expected = self.labels[idx]
         print(f"\n--- Step {state.global_step} ---")
-        print(f"Verse (with taamim): {verse}")
-        print(f"Expected labels:     {expected}")
+        print(f"Verse (with taamim): {self.verse}")
+        print(f"Expected labels:     {self.label}")
         try:
-            preds = self.predict_fn(verse, max_new_tokens=80)
+            preds = self.predict_fn(self.verse, max_new_tokens=80)
             print(f"Predicted taams:     {' '.join(preds)}")
         except Exception as e:
             print(f"Prediction error: {e}")
@@ -276,7 +276,7 @@ trainer = SFTTrainer(
     args=sft_cfg,
     train_dataset=train_dataset,
     eval_dataset=val_dataset_small,
-    callbacks=[SamplePredictionCallback(val_verses, val_labels, predict_taams)],
+    callbacks=[SamplePredictionCallback(val_verses[sample_verse_idx], val_labels[sample_verse_idx], predict_taams)],
 )
 
 # %% Train

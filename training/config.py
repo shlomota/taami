@@ -24,7 +24,7 @@ VAL_BOOKS   = ["DEU"]
 class TrainConfig:
     model_name: str  = "alephbert"
     batch_size:  int   = 16
-    num_epochs:  int   = 10
+    num_epochs:  int   = 3
     learning_rate: float = 2e-5
     weight_decay:  float = 0.01
     warmup_ratio:  float = 0.06

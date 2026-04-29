@@ -11,17 +11,32 @@ NO_TAAM = "z"
 
 
 def compute_metrics(eval_pred) -> dict:
-    """Trainer-compatible metric: word-level accuracy, ignoring -100 padding positions."""
+    """Trainer-compatible metrics: word accuracy and verse exact-match accuracy."""
     logits, label_ids = eval_pred
     preds = np.argmax(logits, axis=-1)
+
     y_true, y_pred = [], []
+    verse_correct = verse_total = 0
+
     for pred_row, label_row in zip(preds, label_ids):
+        word_true, word_pred = [], []
         for p, l in zip(pred_row, label_row):
             if l != -100:
-                y_true.append(l)
-                y_pred.append(p)
-    word_acc = sum(p == t for p, t in zip(y_pred, y_true)) / len(y_true) if y_true else 0.0
-    return {"word_accuracy": round(word_acc, 4)}
+                word_true.append(l)
+                word_pred.append(p)
+        if word_true:
+            y_true.extend(word_true)
+            y_pred.extend(word_pred)
+            verse_total += 1
+            if word_true == word_pred:
+                verse_correct += 1
+
+    word_acc  = sum(p == t for p, t in zip(y_pred, y_true)) / len(y_true) if y_true else 0.0
+    verse_acc = verse_correct / verse_total if verse_total else 0.0
+    return {
+        "word_accuracy":  round(word_acc,  4),
+        "verse_accuracy": round(verse_acc, 4),
+    }
 
 
 def evaluate_book(

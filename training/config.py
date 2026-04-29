@@ -34,3 +34,4 @@ class TrainConfig:
     early_stop_patience: int = 5
     seed: int = 42
     fp16: bool = True             # set False for CPU-only runs
+    use_crf: bool = False         # True → BertCRF with Viterbi decode

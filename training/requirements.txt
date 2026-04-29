@@ -8,3 +8,4 @@ pandas>=2.0.0
 numpy>=1.26.0
 matplotlib>=3.8.0
 seaborn>=0.13.0
+pytorch-crf>=0.7.2     # only needed when use_crf=True in TrainConfig

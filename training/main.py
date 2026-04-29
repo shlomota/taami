@@ -58,12 +58,12 @@ from metrics import compute_metrics, evaluate_book, taam_display_name
 # ## Configuration — change `model_name` to try different models
 
 # %% Config
-cfg        = TrainConfig(model_name="alephbert")   # see config.MODEL_REGISTRY
+cfg        = TrainConfig(model_name="alephbert", use_crf=False)  # set use_crf=True for BERT-CRF
 model_id   = MODEL_REGISTRY[cfg.model_name]
 OUTPUT_DIR = _TRAINING_DIR / "output"
 OUTPUT_DIR.mkdir(exist_ok=True)
 
-print(f"Model : {model_id}")
+print(f"Model : {model_id}  (CRF={cfg.use_crf})")
 print(f"Train : {TRAIN_BOOKS}")
 print(f"Val   : {VAL_BOOKS}")
 print(f"Output: {OUTPUT_DIR}")
@@ -115,13 +115,17 @@ print(f"Val   dataset: {len(val_dataset)} examples")
 # ## Model
 
 # %% Model
-model = AutoModelForTokenClassification.from_pretrained(
-    model_id,
-    num_labels=num_labels,
-    id2label=_display,
-    label2id={v: k for k, v in _display.items()},
-    ignore_mismatched_sizes=True,
-)
+if cfg.use_crf:
+    from model import BertCRF  # requires: pip install pytorch-crf
+    model = BertCRF(model_id, num_labels)
+else:
+    model = AutoModelForTokenClassification.from_pretrained(
+        model_id,
+        num_labels=num_labels,
+        id2label=_display,
+        label2id={v: k for k, v in _display.items()},
+        ignore_mismatched_sizes=True,
+    )
 
 # %% [markdown]
 # ## Training
@@ -151,7 +155,25 @@ training_args = TrainingArguments(
 
 data_collator = DataCollatorForTokenClassification(tokenizer)
 
-trainer = Trainer(
+
+class CRFTrainer(Trainer):
+    """Trainer subclass that uses Viterbi decode at eval time for BertCRF models."""
+
+    def prediction_step(self, model, inputs, prediction_loss_only, ignore_keys=None):
+        loss, logits, labels = super().prediction_step(
+            model, inputs, prediction_loss_only, ignore_keys
+        )
+        if logits is None or not hasattr(model, "crf"):
+            return loss, logits, labels
+        # Replace raw emissions with Viterbi-decoded one-hot logits so that
+        # np.argmax in compute_metrics gives the CRF-optimal label per word.
+        one_hot = model.viterbi_one_hot(logits, labels)
+        return loss, one_hot, labels
+
+
+TrainerClass = CRFTrainer if cfg.use_crf else Trainer
+
+trainer = TrainerClass(
     model=model,
     args=training_args,
     train_dataset=train_dataset,

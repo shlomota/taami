@@ -120,22 +120,26 @@ def format_example(verse_text: str) -> str | None:
 # %% Build train / val datasets
 corpus = load_tikkun_data()
 
-def _build(books: list[str]) -> list[str]:
-    out = []
+def _build(books: list[str]) -> tuple[list[str], list[str], list[str]]:
+    """Return (formatted_texts, original_verses, expected_labels)."""
+    texts, verses, labels = [], [], []
     for book, chapters in corpus.items():
         if book not in books:
             continue
-        for chap, verses in chapters.items():
-            for vnum, text in verses.items():
+        for chap, chapter_verses in chapters.items():
+            for vnum, text in chapter_verses.items():
                 ex = format_example(text)
                 if ex:
-                    out.append(ex)
-    return out
+                    texts.append(ex)
+                    verses.append(text)
+                    words = [w for w in verse_word_list(text) if w["plain"]]
+                    labels.append(" ".join(word_taam_name(w["text"]) for w in words))
+    return texts, verses, labels
 
 
 random.seed(SEED)
-train_texts = _build(TRAIN_BOOKS)
-val_texts   = _build(VAL_BOOKS)
+train_texts, train_verses, train_labels = _build(TRAIN_BOOKS)
+val_texts, val_verses, val_labels = _build(VAL_BOOKS)
 print(f"Train: {len(train_texts):,} | Val: {len(val_texts):,}")
 print("\nSample example:")
 print(train_texts[0])
@@ -146,9 +150,6 @@ val_dataset   = Dataset.from_dict({"text": val_texts})
 # Eval on 5% of val set
 val_dataset_small = val_dataset.select(range(len(val_dataset) // 20))
 print(f"Eval on {len(val_dataset_small)} samples (5% of val)")
-
-# Store a sample verse for periodic prediction printing
-sample_verse_idx = random.randint(0, len(val_texts) - 1)
 
 # %% [markdown]
 # ## Tokenizer
@@ -201,15 +202,21 @@ model.print_trainable_parameters()
 
 # %% Callback to print sample predictions
 class SamplePredictionCallback(TrainerCallback):
-    def __init__(self, sample_text, predict_fn):
-        self.sample_text = sample_text
+    def __init__(self, verses, labels, predict_fn):
+        self.verses = verses
+        self.labels = labels
         self.predict_fn = predict_fn
 
     def on_evaluate(self, args, state, control, **kwargs):
+        idx = random.randint(0, len(self.verses) - 1)
+        verse = self.verses[idx]
+        expected = self.labels[idx]
         print(f"\n--- Step {state.global_step} ---")
+        print(f"Verse (with taamim): {verse}")
+        print(f"Expected labels:     {expected}")
         try:
-            preds = self.predict_fn(self.sample_text, max_new_tokens=80)
-            print(f"Predicted taams: {' '.join(preds)}")
+            preds = self.predict_fn(verse, max_new_tokens=80)
+            print(f"Predicted taams:     {' '.join(preds)}")
         except Exception as e:
             print(f"Prediction error: {e}")
 
@@ -269,7 +276,7 @@ trainer = SFTTrainer(
     args=sft_cfg,
     train_dataset=train_dataset,
     eval_dataset=val_dataset_small,
-    callbacks=[SamplePredictionCallback(val_texts[sample_verse_idx], predict_taams)],
+    callbacks=[SamplePredictionCallback(val_verses, val_labels, predict_taams)],
 )
 
 # %% Train

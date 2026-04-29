@@ -30,7 +30,7 @@ from pathlib import Path
 import numpy as np
 import torch
 from datasets import Dataset
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, TrainerCallback
 from peft import LoraConfig, get_peft_model, TaskType
 from trl import SFTTrainer, SFTConfig
 
@@ -143,6 +143,13 @@ print(train_texts[0])
 train_dataset = Dataset.from_dict({"text": train_texts})
 val_dataset   = Dataset.from_dict({"text": val_texts})
 
+# Eval on 5% of val set
+val_dataset_small = val_dataset.select(range(len(val_dataset) // 20))
+print(f"Eval on {len(val_dataset_small)} samples (5% of val)")
+
+# Store a sample verse for periodic prediction printing
+sample_verse_idx = random.randint(0, len(val_texts) - 1)
+
 # %% [markdown]
 # ## Tokenizer
 
@@ -192,6 +199,20 @@ model.print_trainable_parameters()
 # ## Training
 
 
+# %% Callback to print sample predictions
+class SamplePredictionCallback(TrainerCallback):
+    def __init__(self, sample_text, predict_fn):
+        self.sample_text = sample_text
+        self.predict_fn = predict_fn
+
+    def on_evaluate(self, args, state, control, **kwargs):
+        print(f"\n--- Step {state.global_step} ---")
+        try:
+            preds = self.predict_fn(self.sample_text, max_new_tokens=80)
+            print(f"Predicted taams: {' '.join(preds)}")
+        except Exception as e:
+            print(f"Prediction error: {e}")
+
 # %% Training config
 sft_cfg = SFTConfig(
     output_dir=str(OUTPUT_DIR),
@@ -210,29 +231,14 @@ sft_cfg = SFTConfig(
     load_best_model_at_end=True,
     metric_for_best_model="eval_loss",
     greater_is_better=False,
+    eval_strategy="steps",
+    eval_steps=20,
     logging_steps=20,
     report_to="none",
     seed=SEED,
     dataset_text_field="text",
     packing=False,
 )
-
-trainer = SFTTrainer(
-    model=model,
-    args=sft_cfg,
-    train_dataset=train_dataset,
-    eval_dataset=val_dataset,
-)
-
-# %% Train
-trainer.train()
-
-trainer.model.save_pretrained(str(OUTPUT_DIR / "best_model"))
-tokenizer.save_pretrained(str(OUTPUT_DIR / "best_model"))
-print(f"\nSaved to {OUTPUT_DIR / 'best_model'}")
-
-# %% [markdown]
-# ## Evaluation
 
 # %% Greedy generation for one verse
 def predict_taams(verse_text: str, max_new_tokens: int = 80) -> list[str]:
@@ -257,6 +263,24 @@ def predict_taams(verse_text: str, max_new_tokens: int = 80) -> list[str]:
         out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True
     )
     return generated.strip().split()
+
+trainer = SFTTrainer(
+    model=model,
+    args=sft_cfg,
+    train_dataset=train_dataset,
+    eval_dataset=val_dataset_small,
+    callbacks=[SamplePredictionCallback(val_texts[sample_verse_idx], predict_taams)],
+)
+
+# %% Train
+trainer.train()
+
+trainer.model.save_pretrained(str(OUTPUT_DIR / "best_model"))
+tokenizer.save_pretrained(str(OUTPUT_DIR / "best_model"))
+print(f"\nSaved to {OUTPUT_DIR / 'best_model'}")
+
+# %% [markdown]
+# ## Post-Training Evaluation
 
 
 # %% Evaluate on a sample of VAL_BOOKS

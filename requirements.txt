@@ -1,5 +1,10 @@
-joblib==0.16.0
-matplotlib==3.5.2
-transformers==4.8.1
-torch>=1.9.0
+joblib
+matplotlib
+transformers>=4.30.0
+torch>=2.0.0
 gdown
+streamlit>=1.35.0
+anthropic[bedrock]>=0.28.0
+pandas
+numpy
+python-dotenv

@@ -1,1 +1,4 @@
 *.bin
+.env
+training/data/
+training/output/

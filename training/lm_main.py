@@ -215,6 +215,7 @@ sft_cfg = SFTConfig(
     seed=SEED,
     dataset_text_field="text",
     packing=False,
+    max_seq_length=MAX_SEQ_LEN,
 )
 
 trainer = SFTTrainer(
@@ -222,8 +223,6 @@ trainer = SFTTrainer(
     args=sft_cfg,
     train_dataset=train_dataset,
     eval_dataset=val_dataset,
-    max_seq_length=MAX_SEQ_LEN,
-    response_template=RESPONSE_TEMPLATE,
 )
 
 # %% Train

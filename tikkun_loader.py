@@ -172,8 +172,11 @@ def verse_word_list(verse_text: str) -> list[dict]:
         # Strip keri brackets [word] → word (keep the taam-bearing reading)
         if raw.startswith('[') and ']' in raw:
             raw = raw.replace('[', '').replace(']', '')
-        plain = strip_nikud_and_teamim(raw).replace(MAQAF, '')
+        plain = strip_nikud_and_teamim(raw)  # maqaf kept — it's part of the word unit
         plain = plain.replace('\u05C3', '').replace('\u05C0', '').strip()
+        # Strip parasha marker (ס/פ) attached directly to a verse-final word (e.g. הזה׃ס)
+        if '\u05C3' in raw and plain and plain[-1] in ('ס', 'פ'):
+            plain = plain[:-1]
         if not plain:
             continue
         words.append({

@@ -46,8 +46,7 @@ def _verse_to_record(
         lbl = NO_TAAM
         for ch in w["text"]:
             if ch in UNICODE_TO_TAAM:
-                lbl = ch
-                break
+                lbl = ch  # last ta'am on the word wins
         tokens.append(w["plain"])
         labels.append(label2id[lbl])
     if not tokens:

@@ -166,6 +166,12 @@ def verse_word_list(verse_text: str) -> list[dict]:
     raw_words = verse_text.split()
     words = []
     for raw in raw_words:
+        # Skip section markers {ס}/{פ} and ketiv readings (word)
+        if raw.startswith('{') or raw.startswith('('):
+            continue
+        # Strip keri brackets [word] → word (keep the taam-bearing reading)
+        if raw.startswith('[') and ']' in raw:
+            raw = raw.replace('[', '').replace(']', '')
         plain = strip_nikud_and_teamim(raw).replace(MAQAF, '')
         plain = plain.replace('\u05C3', '').replace('\u05C0', '').strip()
         if not plain:

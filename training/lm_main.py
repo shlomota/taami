@@ -195,7 +195,6 @@ model.print_trainable_parameters()
 # %% Training config
 sft_cfg = SFTConfig(
     output_dir=str(OUTPUT_DIR),
-    max_seq_length=MAX_SEQ_LEN,
     num_train_epochs=NUM_EPOCHS,
     per_device_train_batch_size=BATCH_SIZE,
     per_device_eval_batch_size=BATCH_SIZE,
@@ -216,7 +215,6 @@ sft_cfg = SFTConfig(
     seed=SEED,
     dataset_text_field="text",
     packing=False,
-    response_template=RESPONSE_TEMPLATE,
 )
 
 trainer = SFTTrainer(
@@ -225,6 +223,8 @@ trainer = SFTTrainer(
     train_dataset=train_dataset,
     eval_dataset=val_dataset,
     tokenizer=tokenizer,
+    max_seq_length=MAX_SEQ_LEN,
+    response_template=RESPONSE_TEMPLATE,
 )
 
 # %% Train

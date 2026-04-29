@@ -200,7 +200,7 @@ sft_cfg = SFTConfig(
     per_device_eval_batch_size=BATCH_SIZE,
     gradient_accumulation_steps=GRAD_ACCUM,
     learning_rate=LR,
-    warmup_ratio=WARMUP_RATIO,
+    warmup_steps=int(len(train_dataset) * NUM_EPOCHS * WARMUP_RATIO / (BATCH_SIZE * GRAD_ACCUM)),
     lr_scheduler_type="cosine",
     bf16=torch.cuda.is_available() and torch.cuda.is_bf16_supported(),
     fp16=torch.cuda.is_available() and not torch.cuda.is_bf16_supported(),
@@ -222,7 +222,6 @@ trainer = SFTTrainer(
     args=sft_cfg,
     train_dataset=train_dataset,
     eval_dataset=val_dataset,
-    tokenizer=tokenizer,
     max_seq_length=MAX_SEQ_LEN,
     response_template=RESPONSE_TEMPLATE,
 )
